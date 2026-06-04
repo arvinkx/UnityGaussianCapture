@@ -302,7 +302,9 @@ public class CameraCaptureEditor : EditorWindow
             imgWriter.WriteLine("# IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, IMAGE_NAME");
             imgWriter.WriteLine("# POINTS2D[] as X, Y, POINT3D_ID");
 
-            RenderTexture rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGBFloat);
+            // Check if the project is in Linear space. If yes, force sRGB conversion. Otherwise, leave it as Default.
+            RenderTextureReadWrite rwMode = PlayerSettings.colorSpace == ColorSpace.Linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default;
+            RenderTexture rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGB32, rwMode);
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
 
             int imageId = 1;
@@ -415,7 +417,7 @@ public class CameraCaptureEditor : EditorWindow
 
 
 
-                        rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGBFloat);
+                        rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGB32, rwMode);
                         tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
 
                         yield return null;
@@ -540,7 +542,9 @@ public class CameraCaptureEditor : EditorWindow
             imgWriter.WriteLine("# IMAGE_ID, QW, QX, QY, QZ, TX, TY, TZ, CAMERA_ID, IMAGE_NAME");
             imgWriter.WriteLine("# POINTS2D[] as X, Y, POINT3D_ID");
 
-            RenderTexture rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGBFloat);
+            // Check if the project is in Linear space. If yes, force sRGB conversion. Otherwise, leave it as Default.
+            RenderTextureReadWrite rwMode = PlayerSettings.colorSpace == ColorSpace.Linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Default;
+            RenderTexture rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGB32, rwMode);
 
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
 
@@ -691,7 +695,7 @@ public class CameraCaptureEditor : EditorWindow
 
 
 
-                                rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGBFloat);
+                                rt = new RenderTexture(w, h, 32, RenderTextureFormat.ARGB32, rwMode);
                                 tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
 
                                 yield return null;
