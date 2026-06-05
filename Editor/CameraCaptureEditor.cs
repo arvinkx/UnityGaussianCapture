@@ -604,6 +604,13 @@ public class CameraCaptureEditor : EditorWindow
                             Plane[] planes = GeometryUtility.CalculateFrustumPlanes(cameraToUse);
                             bool objectVisible = false;
 
+                            foreach (MeshRenderer r in GameObject.FindObjectsOfType<MeshRenderer>())
+                            {
+                                if (!r.GetComponent<Collider>())
+                                {
+                                    r.gameObject.AddComponent<MeshCollider>();
+                                }
+                            }
 
                             foreach (SkinnedMeshRenderer r in GameObject.FindObjectsOfType<SkinnedMeshRenderer>())
                             {
@@ -797,44 +804,48 @@ public class CameraCaptureEditor : EditorWindow
         return directions;
     }
     void CapturePointCloudFromCamera(Camera cam, Texture2D tex, int rayCount, StreamWriter writer, int imageId, ref int pointId)
-{
-    int width = tex.width;
-    int height = tex.height;
-
-    int sqrtRayCount = Mathf.CeilToInt(Mathf.Sqrt(rayCount));
-    float stepX = width / (float)sqrtRayCount;
-    float stepY = height / (float)sqrtRayCount;
-
-        int noCloudLayer = LayerMask.NameToLayer("NoCloud");
-
-        int layerMask = ~(1 << noCloudLayer); 
-
-        for (int i = 0; i < sqrtRayCount; i++)
     {
-        for (int j = 0; j < sqrtRayCount; j++)
+        int sqrtRayCount = Mathf.CeilToInt(Mathf.Sqrt(rayCount));
+        
+        int noCloudLayer = LayerMask.NameToLayer("NoCloud");
+        int layerMask = ~(1 << noCloudLayer); 
+    
+        for (int i = 0; i < sqrtRayCount; i++)
         {
-            float px = i * stepX + stepX / 2f;
-            float py = j * stepY + stepY / 2f;
-
-            Ray ray = cam.ScreenPointToRay(new Vector3(px, py, 0));
-
-                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, layerMask))
+            for (int j = 0; j < sqrtRayCount; j++)
+            {
+                // Use Viewport coords (0.0 to 1.0) to prevent resolution scaling bugs
+                float viewportX = (i + 0.5f) / sqrtRayCount;
+                float viewportY = (j + 0.5f) / sqrtRayCount;
+    
+                Ray ray = cam.ViewportPointToRay(new Vector3(viewportX, viewportY, 0));
+    
+                // Add 'QueryTriggerInteraction.Ignore' so we don't hit invisible trigger boxes
+                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, layerMask, QueryTriggerInteraction.Ignore))
                 {
+                    // Map viewport coordinates back to exact pixel coordinates
+                    int px = Mathf.Clamp(Mathf.FloorToInt(viewportX * tex.width), 0, tex.width - 1);
+                    int py = Mathf.Clamp(Mathf.FloorToInt(viewportY * tex.height), 0, tex.height - 1);
+    
+                    Color color = tex.GetPixel(px, py);
+    
+                    // If the pixel is fully transparent (Skybox/Background), skip this point!
+                    if (color.a < 0.1f)
+                        continue;
+    
+                    // Do not multiply X by -1 (fixes the mirror bug we solved earlier)
                     Vector3 worldPos = hit.point;
-                worldPos = new Vector3(worldPos.x * -1, worldPos.y, worldPos.z);
-
-                Color color = tex.GetPixel((int)px, (int)py);
-                int r = Mathf.Clamp((int)(color.r * 255), 0, 255);
-                int g = Mathf.Clamp((int)(color.g * 255), 0, 255);
-                int b = Mathf.Clamp((int)(color.b * 255), 0, 255);
-
-
-                    writer.WriteLine($"{pointId} {worldPos.x.ToString(CultureInfo.InvariantCulture)} {worldPos.y.ToString(CultureInfo.InvariantCulture)} {worldPos.z.ToString(CultureInfo.InvariantCulture)} {r} {g} {b} 1.0");
+    
+                    int r = Mathf.Clamp((int)(color.r * 255), 0, 255);
+                    int g = Mathf.Clamp((int)(color.g * 255), 0, 255);
+                    int b = Mathf.Clamp((int)(color.b * 255), 0, 255);
+    
+                    // Appended ' {imageId} 0' for COLMAP compatibility
+                    writer.WriteLine($"{pointId} {worldPos.x.ToString(CultureInfo.InvariantCulture)} {worldPos.y.ToString(CultureInfo.InvariantCulture)} {worldPos.z.ToString(CultureInfo.InvariantCulture)} {r} {g} {b} 1.0 {imageId} 0");
+                    
                     pointId++;
+                }
             }
         }
     }
-}
-
-
 }
